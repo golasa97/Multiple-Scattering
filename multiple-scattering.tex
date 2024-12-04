@@ -45,14 +45,16 @@ and $\zeta$ is a uniformly distributed random value between 0 and 1. The neutron
     \end{bmatrix}
 \end{equation}
 
-Cross sections are sampled at the energy $E^0$ according to the procedure described in \autoref{sec:resonance-sampling}. These values are then used to produce the average cross sections,
+Cross sections are sampled at the energy $E^0$ according to the procedure described in \autoref{sec:resonance-sampling}. These values are then used to produce the average cross-sections,
 \begin{align}
-    \label{eq:average-cross-sections}
-    \Sigma_{t}^{0} &= \sum_{j} \sigma_{t,j}^{0} \delta_{j} \\
-    \Sigma_{\gamma}^{0} &= \sum_{j} \sigma_{\gamma,j}^{0} \delta_{j} \\
-    \Sigma_{el}^{0} &= \sum_{j} \sigma_{el,j}^{0} \delta_{j}
+    \label{eq:average-total-cross-section}
+    \overline{ \sigma_{t} }^{0} &= \sum_{j} \sigma_{t,j}^{0} \delta_{j} \\
+    \label{eq:average-capture-cross-section}
+    \overline{ \sigma_{\gamma} }^{0} &= \sum_{j} \sigma_{\gamma,j}^{0} \delta_{j} \\
+    \label{eq:average-scattering-cross-section}
+    \overline{ \sigma_{sc} }^{0} &= \sum_{j} \sigma_{sc,j}^{0} \delta_{j}
 \end{align}
-where $\Sigma_{t}^0$, $\Sigma_{\gamma}^0$, $\Sigma_{el}^0$ are the macroscopic total, capture, and elastic scattering cross sections respectively, and $\sigma_{j}^0$ and $\delta_{j}$ are the microscopic cross section and relative abundance of the $j^{th}$ isotope, respectively.
+where $\overline{ \sigma_{t} }$, $\overline{ \sigma_{\gamma} }$, and $\overline{ \sigma_{sc} }$  are the weighted average total, capture, and scattering cross-sections respectively. The $0$ superscript indicates that the cross-sections are taken at the energy $E^{0}$, i.e., before any scattering events have occurred. The terms $\sigma_{j}^0$ and $\delta_{j}$ are the microscopic cross-section and relative abundance of the $j^{th}$ isotope, respectively.
 
 \subsection{Scattering Events}
 
@@ -100,8 +102,8 @@ Once the $d_{front}, d_{back}, \text{ and } d_{cyl}$ distances are determined, t
 Next, a new set of total, capture, and elastic cross sections are sampled at energy $E^k$, which are then used to determine the sampled distance until the next collision,
 \begin{equation}
     \label{eq:free-path-sampling}
-    s^k = -\frac{1}{\Sigma_{t}} \ln{\left\{
-        1 - \zeta \left[ 1 - \exp{\left( -\Sigma_t d^k \right)} \right]
+    s^k = -\frac{1}{\overline{\sigma_{t} }^{k} }  \ln{\left\{
+                1 - \zeta \left[ 1 - \exp{\left( \overline{\sigma_{t}}^{k} d^k \right)} \right]
     \right\}}
 \end{equation}
 where $\zeta$ is a randomly selected value between 0 and 1. This distance term $s^{k}$ is then used to calculate the location of the next scattering event,
@@ -116,7 +118,7 @@ The energy in which the neutron leaves the scattering event, i.e., $E^{k+1}$, mu
 
 First, addressing the mass dependency. This quantity must be sampled according to each isotopes calculated scattering cross section and their given abundances, as
 \begin{equation}
-    w_{j} = \frac{\delta_j \sigma_{j,el}^{k} }{\Sigma_{el}^k}
+    w_{j} = \frac{\delta_j \sigma_{j,sc}^{k} }{\overline{\sigma_{sc}}^{k}}
 \end{equation}
 This quantity is then used to calculate a cumulative weight, such that
 \begin{equation}
@@ -184,29 +186,59 @@ However, in the case where $\left(\Omega_w^k\right)^2 = 1$, \autoref{eq:directio
 \end{equation}
 is used instead. Finally, all required components to sample the subsequent scattering event are obtained: $\overrightarrow{x}^{k+1}$, $\overrightarrow{\Omega}^{k+1}$, and $E^{k+1}$.
 
-\subsubsection{Killing neutrons}
+\subsubsection{Weighting Neutrons}
 \label{sec:killing-neutrons-ms}
-A calculation must be made to ensure that sufficient scattering events are being accounted for, but not so
+A calculation must be made to ensure that sufficient scattering events are being accounted for, but not so many scattering events such that it is too computationally expensive, or unrealistic collision events are biasing the yield in some way.
 
 A weighted importance is used to determine the contribution of a particle to capture yield, and when to consider the neutron sufficiently unimportant. This is the same calculation being performed by default with MCNP\cite{mcnp}. 
 
+Given the sampled distance $s^{k}$,
+\begin{align}
+    \label{eq:tot-frac}
+    \gamma_{tot}^{k} &=  1 - \exp{ \left(-s^{k} \overline{\sigma_{t}}^{k} \right)} \\
+    \label{eq:el-frac}
+    \gamma_{sc}^{k} &= \gamma_{tot}^{k} \frac{\overline{\sigma_{sc}}^{k}} {\overline{\sigma_{t}}^{k}} \\
+    \label{eq:cap-frac}
+    \gamma_{cap}^{k} &= \gamma_{tot}^{k} \frac{\overline{\sigma_{\gamma}}^{k}}{\overline{\sigma_{t}}^{k}}
+\end{align}
+
+The neutron weight is determined as a function of the non-captured fraction. Starting out with a weight $w^{0}=1$, the weight of a surviving neutron is the product of each non-captured fraction,
+\begin{equation}
+    \label{eq:neutron-weight}
+    w^{k} = w^{k-1}\gamma_{el}^{k}
+\end{equation}
+
+This quantity is used in two ways; first, the factor is used to determine the total number of collisions $K$ that a neutron will experience before it is no longer statistically significant. If the weight ends up less than some cutoff factor, $\varepsilon$, the total number of collisions is reached,
+\begin{equation}
+    \label{eq:collision-counter}
+    K = \min{ \left\{ k : w^{k} \leq \varepsilon \right\}}
+\end{equation}
+
+The second purpose of the weighting factor is to determine the total probability of capture after $K$ collisions for a single neutron history. The total probability of a neutron being captured is the sum of all weighted capture events until the collision $K$. The probability that a neutron will be captured at the $k^{th}$ collision is the product of the neutron's surviving weight from the previous collision times the capture interacting fraction $\gamma_{cap}^{k}$. This is given explicitly as
+\begin{equation}
+    \label{eq:capture-total-prob}
+     p = \sum_{k=1}^{K} w^{k-1}\gamma_{cap}^{k}
+\end{equation}
+
 \subsection{Calculating The Capture Correction Factor}
 
-The term $w_{i,k}^{c}$ refers to the probability of a single neutron that is absorbed at the $k^{th}$ collision. 
+The two additional quantities required to calculate the capture correction factor are the energy averaged capture cross-section, $\langle \overline{\sigma_{\gamma}} \rangle$, and energy averaged capture probability, $\langle p \rangle$. These are obtained using the $p$ term from \autoref{eq:capture-total-prob}, and $\overline{\sigma_{\gamma}}^{0}$ from \autoref{eq:average-capture-cross-section}, as
+\begin{equation}
+    \label{eq:avg-capture-prob}
+    \langle p \rangle = \frac{1}{N} \sum_{i=1}^{N} p_{i}
+\end{equation}
+and
+\begin{equation}
+    \label{eq:avg-capture-xs}
+    \langle \overline{\sigma_{\gamma}} \rangle = \frac{1}{N} \sum_{i=1}^{N} \overline{\sigma_{\gamma}}^{0}_{i}
+\end{equation}
+where the sum is over $N$ total neutron histories. $p$ and $\overline{\sigma_{\gamma}}$ recieve the $i$ subscript to denote that their quantities refer to the $i^{th}$ neutron history.
 
-The sequence of absorptions and scatters before the particle is killed can determine the yield of this particular neutron history,
+These quantities are then used to calculate the capture correction factor,
 \begin{equation}
-    \label{eq:single-history-yield}
-    Y_i = w_0^{c} + \sum_{k=1}^{K} w_{i,k}^{c}w_{i,k-1}^{s}
+    \label{eq:capture-correction-factor-calc}
+    C_{C} = \frac{\langle p \rangle }{\langle \overline{ \sigma_{\gamma} } \rangle n}
 \end{equation}
-Then taking the yield calculated for each neutron $Y_i$ over $N$ histories produces
-\begin{equation}
-    \label{eq:average-yield}
-    \langle Y \rangle = \frac{1}{N}\sum{Y_i}^{N}
-\end{equation}
+which can then be used in \autoref{eq:correction-thin-sample-approximation} to estimate the energy averaged capture yield $\langle Y \rangle$. 
 
-Given this calculated average yield, $\langle Y \rangle$ and average capture cross section, $\langle \sigma_\gamma \rangle$, these are then used to calculate the capture correction factor,
-\begin{equation}
-    \label{eq:capture-correction}
-    C_C = \frac{\langle Y \rangle}{n \langle \sigma_\gamma \rangle}
-\end{equation}
+It should be noted that the average capture cross section $\langle \overline{\sigma_{\gamma}} \rangle$ calculated from \autoref{eq:avg-capture-xs} and $\langle \sigma_{\gamma} \rangle$ are not necessarily the same quantity. The $\langle \overline{\sigma_{\gamma}} \rangle$ is computed via Monte Carlo simulation, while $\langle \sigma_{\gamma} \rangle$ from \autoref{eq:correction-thin-sample-approximation} is calculated analytically. The difference between these two quantities is explored in \autoref{sec:xs-variance-dependence}.

@@ -1,4 +1,13 @@
-The capture correction term is used to correct for both resonance self-shielding, as well as multiple scattering. Multiple scattering is an effect which occurs in which a neutron is scattered one or more times before being captured in a sample. As the thickness of the sample increases, the probability of a scattered neutron experiencing a subsequent reaction (that being a capture or additional scattering events) also increases. Therefore, neutrons which undergo scattering events can end up miscounted as captures, artificially increasing the measured yield.
+Another important quantity to correct for in the unresolved resonance region is capture yield. In these experiments, there are two phenomena at play: first the resonance self shielding, as described in \autoref{sec:resonance-self-shielding}. The second effect is called multiple scattering.
+
+Multiple scattering is an effect which occurs in which a neutron is scattered one or more times before being captured in a sample. As the thickness of the sample increases, the probability of a scattered neutron experiencing a subsequent reaction (that being a capture or additional scattering events) also increases. Therefore, neutrons which undergo scattering events can end up miscounted as captures, artificially increasing the measured yield.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Figures/multiplescattering.png}
+    \caption{Illustration of a neutron undergoing multiple scattering events, and getting miscounted as a capture event.}
+    \label{fig:multiple-scattering-example}
+\end{figure}
+This is illustrated in \autoref{fig:multiple-scattering-example} in which a neutron scatters twice before being captured.
 
 This correction is made with reference to the thin sample approximation,
 \begin{equation}
